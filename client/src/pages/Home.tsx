@@ -11,6 +11,7 @@ import PositionsTable from "@/components/PositionsTable";
 import AllocationCharts from "@/components/AllocationCharts";
 import AccountPerformance from "@/components/AccountPerformance";
 import PensionAllocationChart from "@/components/PensionAllocationChart";
+import TimeseriesChart from "@/components/TimeseriesChart";
 import TradeHistory from "@/components/TradeHistory";
 import PriceUpdatePanel from "@/components/PriceUpdatePanel";
 import TradeForm from "@/components/TradeForm";
@@ -247,6 +248,9 @@ export default function Home() {
             animate={{ opacity: 1 }}
             className="space-y-5"
           >
+            {/* Timeseries Chart */}
+            <TimeseriesChart />
+
             {/* Charts Row: Allocation + Pension + Account Performance */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               {/* Asset allocation pie (종목별/계좌별) */}
