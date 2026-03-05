@@ -393,3 +393,28 @@ export const SAMPLE_PRICES: Record<string, number> = {
   "AAPL": 198000,
   "NVDA": 1250000,
 };
+
+
+/**
+ * 연도별 배당금 집계
+ */
+export interface YearlyDividend {
+  year: number;
+  totalDividend: number;
+}
+
+export function calculateYearlyDividends(dividends: Dividend[]): YearlyDividend[] {
+  const byYear: Record<number, number> = {};
+
+  for (const div of dividends) {
+    const year = new Date(div.payDate).getFullYear();
+    byYear[year] = (byYear[year] ?? 0) + div.totalDividend;
+  }
+
+  return Object.entries(byYear)
+    .map(([year, total]) => ({
+      year: parseInt(year),
+      totalDividend: total,
+    }))
+    .sort((a, b) => a.year - b.year);
+}
