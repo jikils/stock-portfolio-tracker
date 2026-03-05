@@ -7,14 +7,26 @@ export type TradeType = "buy" | "sell";
 
 export interface Trade {
   id: string;
-  ticker: string;       // 종목 코드 (예: 005930, AAPL)
-  name: string;         // 종목명
-  type: TradeType;      // 매수/매도
-  quantity: number;     // 수량
-  price: number;        // 단가
-  fee: number;          // 수수료 (원)
-  date: string;         // 거래일 (YYYY-MM-DD)
-  account: string;      // 계좌 유형 (연금저축, IRP, 일반)
+  ticker: string;
+  name: string;
+  type: TradeType;
+  quantity: number;
+  price: number;
+  fee: number;
+  date: string;
+  account: string;
+}
+
+export interface Dividend {
+  id: string;
+  ticker: string;
+  name: string;
+  exDate: string;
+  payDate: string;
+  dividendPerShare: number;
+  totalDividend: number;
+  quantity: number;
+  dividendYield: number;
 }
 
 export type AccountType = "연금저축" | "IRP" | "일반";

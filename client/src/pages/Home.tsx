@@ -15,7 +15,10 @@ import TimeseriesChart from "@/components/TimeseriesChart";
 import TradeHistory from "@/components/TradeHistory";
 import PriceUpdatePanel from "@/components/PriceUpdatePanel";
 import TradeForm from "@/components/TradeForm";
-import { Trade } from "@/lib/portfolio";
+import DividendForm from "@/components/DividendForm";
+import DividendList from "@/components/DividendList";
+import DividendCharts from "@/components/DividendCharts";
+import { Trade, Dividend } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -26,15 +29,17 @@ import {
   RefreshCw,
   ChevronRight,
   ShieldCheck,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
-type TabType = "dashboard" | "trades" | "prices";
+type TabType = "dashboard" | "trades" | "prices" | "dividends";
 
 export default function Home() {
-  const { addTrade, loadSampleData, clearAllData, trades } = usePortfolio();
+  const { addTrade, addDividend, loadSampleData, clearAllData, trades } = usePortfolio();
   const [showTradeForm, setShowTradeForm] = useState(false);
+  const [showDividendForm, setShowDividendForm] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
   const handleAddTrade = (data: Omit<Trade, "id">) => {
@@ -42,6 +47,11 @@ export default function Home() {
     toast.success(
       `${data.name} ${data.type === "buy" ? "매수" : "매도"} 이력이 추가되었습니다`
     );
+  };
+
+  const handleAddDividend = (data: Omit<Dividend, "id">) => {
+    addDividend(data);
+    toast.success(`${data.name} 배당 이력이 추가되었습니다`);
   };
 
   const handleLoadSample = () => {
@@ -60,6 +70,7 @@ export default function Home() {
     { id: "dashboard", label: "대시보드", icon: BarChart2 },
     { id: "trades", label: "매매이력", icon: List },
     { id: "prices", label: "현재가", icon: RefreshCw },
+    { id: "dividends", label: "배당", icon: DollarSign },
   ];
 
   return (
@@ -296,14 +307,46 @@ export default function Home() {
                   현재가 입력
                 </h2>
                 <p className="text-xs text-muted-foreground mt-1">
-                  보유 종목의 현재가를 입력하면 수익률이 계산됩니다.{" "}
-                  <kbd className="px-1 py-0.5 rounded bg-[oklch(0.22_0.02_250)] text-[10px] font-['JetBrains_Mono']">
-                    Enter
-                  </kbd>{" "}
-                  키 또는 새로고침 버튼으로 적용하세요.
+                  보유 종목의 현재가를 입력하면 수익률이 계산됩니다.
                 </p>
               </div>
               <PriceUpdatePanel />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Dividends Tab ── */}
+        {activeTab === "dividends" && (
+          <motion.div
+            key="dividends"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="space-y-5"
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="font-['Sora'] font-semibold text-lg text-foreground">
+                  배당 관리
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  종목별 배당 이력을 기록하고 배당 성장률을 분석합니다.
+                </p>
+              </div>
+              <Button
+                onClick={() => setShowDividendForm(true)}
+                className="bg-[oklch(0.72_0.18_168)] text-[oklch(0.1_0.02_250)] hover:bg-[oklch(0.65_0.18_168)] font-semibold gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                배당 추가
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2">
+                <DividendCharts />
+              </div>
+              <div>
+                <DividendList />
+              </div>
             </div>
           </motion.div>
         )}
@@ -324,6 +367,13 @@ export default function Home() {
         onClose={() => setShowTradeForm(false)}
         onSubmit={handleAddTrade}
         mode="add"
+      />
+
+      {/* ── Dividend Form Modal ── */}
+      <DividendForm
+        open={showDividendForm}
+        onClose={() => setShowDividendForm(false)}
+        onSubmit={handleAddDividend}
       />
     </div>
   );

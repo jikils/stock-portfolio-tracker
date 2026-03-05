@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import {
   Trade,
+  Dividend,
   HoldingPosition,
   PortfolioSummary,
   AssetAllocation,
@@ -19,6 +20,7 @@ import { nanoid } from "nanoid";
 
 interface PortfolioContextValue {
   trades: Trade[];
+  dividends: Dividend[];
   currentPrices: Record<string, number>;
   positions: HoldingPosition[];
   summary: PortfolioSummary;
@@ -27,6 +29,8 @@ interface PortfolioContextValue {
   addTrade: (trade: Omit<Trade, "id">) => void;
   updateTrade: (id: string, trade: Omit<Trade, "id">) => void;
   deleteTrade: (id: string) => void;
+  addDividend: (dividend: Omit<Dividend, "id">) => void;
+  deleteDividend: (id: string) => void;
   updateCurrentPrice: (ticker: string, price: number) => void;
   loadSampleData: () => void;
   clearAllData: () => void;
@@ -36,6 +40,7 @@ const PortfolioContext = createContext<PortfolioContextValue | null>(null);
 
 const STORAGE_KEY_TRADES = "portfolio_trades";
 const STORAGE_KEY_PRICES = "portfolio_prices";
+const STORAGE_KEY_DIVIDENDS = "portfolio_dividends";
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -54,6 +59,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>(() =>
     loadFromStorage(STORAGE_KEY_PRICES, {})
   );
+  const [dividends, setDividends] = useState<Dividend[]>(() =>
+    loadFromStorage(STORAGE_KEY_DIVIDENDS, [])
+  );
 
   // Persist to localStorage
   useEffect(() => {
@@ -63,6 +71,10 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(currentPrices));
   }, [currentPrices]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_DIVIDENDS, JSON.stringify(dividends));
+  }, [dividends]);
 
   const positions = calculatePositions(trades, currentPrices);
   const summary = calculateSummary(positions);
@@ -83,6 +95,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setTrades((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  const addDividend = useCallback((dividend: Omit<Dividend, "id">) => {
+    setDividends((prev) => [...prev, { ...dividend, id: nanoid() }]);
+  }, []);
+
+  const deleteDividend = useCallback((id: string) => {
+    setDividends((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
   const updateCurrentPrice = useCallback((ticker: string, price: number) => {
     setCurrentPrices((prev) => ({ ...prev, [ticker]: price }));
   }, []);
@@ -95,12 +115,14 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const clearAllData = useCallback(() => {
     setTrades([]);
     setCurrentPrices({});
+    setDividends([]);
   }, []);
 
   return (
     <PortfolioContext.Provider
       value={{
         trades,
+        dividends,
         currentPrices,
         positions,
         summary,
@@ -109,6 +131,8 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         addTrade,
         updateTrade,
         deleteTrade,
+        addDividend,
+        deleteDividend,
         updateCurrentPrice,
         loadSampleData,
         clearAllData,
