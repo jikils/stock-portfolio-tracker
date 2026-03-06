@@ -3,15 +3,18 @@
 // Design: Bloomberg Terminal Aesthetic
 // ============================================================
 
+import { useState } from "react";
 import { usePortfolio } from "@/contexts/PortfolioContext";
-import { formatKRW, formatPercent } from "@/lib/portfolio";
+import { formatKRW, formatPercent, Dividend } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
-import { Trash2, DollarSign } from "lucide-react";
+import { Trash2, DollarSign, Edit2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import EditDividendForm from "@/components/EditDividendForm";
 
 export default function DividendList() {
   const { dividends, deleteDividend } = usePortfolio();
+  const [editingDividend, setEditingDividend] = useState<Dividend | null>(null);
 
   if (dividends.length === 0) {
     return (
@@ -130,6 +133,14 @@ export default function DividendList() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => setEditingDividend(div)}
+                        className="h-6 w-6 p-0 hover:bg-[oklch(0.72_0.18_168)/0.2] hover:text-[oklch(0.72_0.18_168)]"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => {
                           deleteDividend(div.id);
                           toast.success("배당 이력이 삭제되었습니다");
@@ -146,6 +157,19 @@ export default function DividendList() {
           );
         })}
       </div>
+
+      {/* Edit Dividend Form */}
+      {editingDividend && (
+        <EditDividendForm
+          dividend={editingDividend}
+          open={!!editingDividend}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingDividend(null);
+            }
+          }}
+        />
+      )}
     </motion.div>
   );
 }

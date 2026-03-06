@@ -30,6 +30,7 @@ interface PortfolioContextValue {
   updateTrade: (id: string, trade: Omit<Trade, "id">) => void;
   deleteTrade: (id: string) => void;
   addDividend: (dividend: Omit<Dividend, "id">) => void;
+  updateDividend: (id: string, dividend: Omit<Dividend, "id">) => void;
   deleteDividend: (id: string) => void;
   updateCurrentPrice: (ticker: string, price: number) => void;
   loadSampleData: () => void;
@@ -99,6 +100,12 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setDividends((prev) => [...prev, { ...dividend, id: nanoid() }]);
   }, []);
 
+  const updateDividend = useCallback((id: string, dividend: Omit<Dividend, "id">) => {
+    setDividends((prev) =>
+      prev.map((d) => (d.id === id ? { ...dividend, id } : d))
+    );
+  }, []);
+
   const deleteDividend = useCallback((id: string) => {
     setDividends((prev) => prev.filter((d) => d.id !== id));
   }, []);
@@ -132,6 +139,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         updateTrade,
         deleteTrade,
         addDividend,
+        updateDividend,
         deleteDividend,
         updateCurrentPrice,
         loadSampleData,
