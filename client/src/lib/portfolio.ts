@@ -418,3 +418,67 @@ export function calculateYearlyDividends(dividends: Dividend[]): YearlyDividend[
     }))
     .sort((a, b) => a.year - b.year);
 }
+
+
+/**
+ * 예상 배당금 계산 - 현재 보유 주식과 최근 배당 이력 기반
+ */
+export interface ProjectedDividend {
+  ticker: string;
+  name: string;
+  currentQuantity: number;
+  lastDividendPerShare: number;
+  projectedAnnualDividend: number;
+}
+
+export function calculateProjectedDividends(
+  holdings: HoldingPosition[],
+  dividends: Dividend[]
+): ProjectedDividend[] {
+  const result: ProjectedDividend[] = [];
+
+  for (const holding of holdings) {
+    // 해당 종목의 배당 이력 중 가장 최근 배당 찾기
+    const tickerDividends = dividends.filter((d) => d.ticker === holding.ticker);
+    
+    if (tickerDividends.length > 0) {
+      // 가장 최근 배당 (지급일 기준)
+      const lastDividend = tickerDividends.reduce((latest, current) => {
+        return new Date(current.payDate) > new Date(latest.payDate) ? current : latest;
+      });
+
+      // 예상 연 배당금 = 최근 배당 × 현재 보유 수량
+      const projectedAnnual = lastDividend.dividendPerShare * holding.totalQuantity;
+
+      result.push({
+        ticker: holding.ticker,
+        name: holding.name,
+        currentQuantity: holding.totalQuantity,
+        lastDividendPerShare: lastDividend.dividendPerShare,
+        projectedAnnualDividend: projectedAnnual,
+      });
+    }
+  }
+
+  return result.sort((a, b) => b.projectedAnnualDividend - a.projectedAnnualDividend);
+}
+
+export interface ProjectedDividendSummary {
+  totalProjectedDividend: number;
+  projectedDividendYield: number;
+  tickerCount: number;
+}
+
+export function calculateProjectedDividendSummary(
+  projected: ProjectedDividend[],
+  totalPortfolioValue: number
+): ProjectedDividendSummary {
+  const totalProjected = projected.reduce((sum, p) => sum + p.projectedAnnualDividend, 0);
+  const yield_ = totalPortfolioValue > 0 ? (totalProjected / totalPortfolioValue) * 100 : 0;
+
+  return {
+    totalProjectedDividend: totalProjected,
+    projectedDividendYield: yield_,
+    tickerCount: projected.length,
+  };
+}

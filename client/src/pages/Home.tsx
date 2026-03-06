@@ -19,6 +19,7 @@ import DividendForm from "@/components/DividendForm";
 import DividendList from "@/components/DividendList";
 import DividendCharts from "@/components/DividendCharts";
 import DividendGrowthChart from "@/components/DividendGrowthChart";
+import ProjectedDividendSummary from "@/components/ProjectedDividendSummary";
 import { Trade, Dividend } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
@@ -340,6 +341,9 @@ export default function Home() {
                 <Plus className="w-4 h-4" />
                 배당 추가
               </Button>
+            </div>
+            <div className="grid grid-cols-1 gap-5">
+              <ProjectedDividendSummary />
             </div>
             <div className="grid grid-cols-1 gap-5">
               <DividendGrowthChart />
