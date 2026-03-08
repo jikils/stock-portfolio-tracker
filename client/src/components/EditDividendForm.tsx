@@ -45,6 +45,7 @@ export default function EditDividendForm({
     const qty = parseInt(formData.quantity);
     const totalDiv = dps * qty;
     updateDividend(dividend.id, {
+      accountId: dividend.accountId,
       ticker: formData.ticker,
       name: formData.name,
       exDate: formData.exDate,

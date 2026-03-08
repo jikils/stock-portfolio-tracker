@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { usePortfolio } from "@/contexts/PortfolioContext";
-import { formatKRW, formatPercent, formatPnL, formatNumber } from "@/lib/portfolio";
+import { formatKRW, formatPercent, formatPnL } from "@/lib/portfolio";
 import { ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -59,7 +59,7 @@ export default function PositionsTable() {
       {/* Table Rows */}
       <div className="divide-y divide-[oklch(0.18_0.02_250)]">
         {positions.map((pos, i) => {
-          const isExpanded = expandedRow === `${pos.ticker}__${pos.account}`;
+          const isExpanded = expandedRow === `${pos.ticker}__${pos.accountId}`;
           const pnlPositive = pos.unrealizedPnLPct >= 0;
           const pnlColor = pnlPositive
             ? "text-[oklch(0.72_0.18_168)]"
@@ -68,7 +68,7 @@ export default function PositionsTable() {
 
           return (
             <motion.div
-              key={`${pos.ticker}__${pos.account}`}
+              key={`${pos.ticker}__${pos.accountId}`}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.04 }}
@@ -77,7 +77,7 @@ export default function PositionsTable() {
                 className="px-5 py-3 hover:bg-[oklch(0.16_0.02_250)] cursor-pointer transition-colors"
                 onClick={() =>
                   setExpandedRow(
-                    isExpanded ? null : `${pos.ticker}__${pos.account}`
+                    isExpanded ? null : `${pos.ticker}__${pos.accountId}`
                   )
                 }
               >
@@ -96,11 +96,11 @@ export default function PositionsTable() {
                     </div>
                     <span
                       className={`inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded border font-medium ${
-                        ACCOUNT_BADGE[pos.account] ??
+                        ACCOUNT_BADGE[pos.accountType] ??
                         "bg-muted text-muted-foreground border-border"
                       }`}
                     >
-                      {pos.account}
+                      {pos.accountType}
                     </span>
                   </div>
 
@@ -145,7 +145,7 @@ export default function PositionsTable() {
 
                   {/* 수량 */}
                   <div className="col-span-1 text-right font-['JetBrains_Mono'] text-sm text-muted-foreground">
-                    {formatNumber(pos.totalQuantity)}
+                    {pos.totalQuantity}
                   </div>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function PositionsTable() {
                         <div className="bg-[oklch(0.15_0.02_250)] rounded p-3">
                           <div className="text-xs text-muted-foreground mb-1">보유 수량</div>
                           <div className="font-['JetBrains_Mono'] text-sm font-semibold">
-                            {formatNumber(pos.totalQuantity)}주
+                            {pos.totalQuantity}주
                           </div>
                         </div>
                       </div>
@@ -214,7 +214,7 @@ export default function PositionsTable() {
                             </div>
                             <div className="flex items-center gap-4 font-['JetBrains_Mono']">
                               <span className="text-muted-foreground">
-                                {formatNumber(trade.quantity)}주
+                                {trade.quantity}주
                               </span>
                               <span className="text-foreground">
                                 @{formatKRW(trade.price)}

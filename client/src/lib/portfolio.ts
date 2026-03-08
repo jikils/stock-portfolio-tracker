@@ -1,12 +1,30 @@
-// ============================================================
 // Portfolio calculation utilities
 // Design: Bloomberg Terminal Aesthetic
 // ============================================================
 
 export type TradeType = "buy" | "sell";
+export type AccountType = "연금저축" | "IRP" | "일반";
+
+/**
+ * 다중 사용자/계좌 구조
+ */
+export interface User {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Account {
+  id: string;
+  userId: string;
+  name: string;
+  type: AccountType;
+  createdAt: string;
+}
 
 export interface Trade {
   id: string;
+  accountId: string;
   ticker: string;
   name: string;
   type: TradeType;
@@ -14,11 +32,11 @@ export interface Trade {
   price: number;
   fee: number;
   date: string;
-  account: string;
 }
 
 export interface Dividend {
   id: string;
+  accountId: string;
   ticker: string;
   name: string;
   exDate: string;
@@ -29,12 +47,12 @@ export interface Dividend {
   dividendYield: number;
 }
 
-export type AccountType = "연금저축" | "IRP" | "일반";
-
 export interface HoldingPosition {
   ticker: string;
   name: string;
-  account: string;
+  accountId: string;
+  accountName: string;
+  accountType: AccountType;
   totalQuantity: number;        // 보유 수량
   avgCost: number;              // 평단가 (수수료 포함)
   totalCost: number;            // 총 매수 금액
@@ -64,7 +82,8 @@ export interface PortfolioSummary {
 export interface AssetAllocation {
   name: string;
   ticker: string;
-  account: string;
+  accountId: string;
+  accountName: string;
   value: number;
   percentage: number;
   color: string;
@@ -96,188 +115,156 @@ export const CHART_COLORS = [
  */
 export function calculatePositions(
   trades: Trade[],
-  currentPrices: Record<string, number>
+  currentPrices: Record<string, number>,
+  accounts: Account[]
 ): HoldingPosition[] {
-  // Group trades by ticker + account
-  const groupKey = (t: Trade) => `${t.ticker}__${t.account}`;
-  const groups: Record<string, Trade[]> = {};
+  const accountMap = new Map(accounts.map(a => [a.id, a]));
+  
+  const positions = new Map<string, HoldingPosition>();
 
   for (const trade of trades) {
-    const key = groupKey(trade);
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(trade);
-  }
+    const key = `${trade.accountId}:${trade.ticker}`;
+    const account = accountMap.get(trade.accountId);
+    
+    if (!account) continue;
 
-  const positions: HoldingPosition[] = [];
-
-  for (const [key, groupTrades] of Object.entries(groups)) {
-    const sorted = [...groupTrades].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    // FIFO queue: [{qty, costPerShare}]
-    const buyQueue: { qty: number; costPerShare: number }[] = [];
-    let realizedPnL = 0;
-
-    for (const trade of sorted) {
-      if (trade.type === "buy") {
-        const costPerShare = (trade.price * trade.quantity + trade.fee) / trade.quantity;
-        buyQueue.push({ qty: trade.quantity, costPerShare });
-      } else {
-        // sell — FIFO
-        let remainSell = trade.quantity;
-        const sellFeePerShare = trade.fee / trade.quantity;
-        while (remainSell > 0 && buyQueue.length > 0) {
-          const front = buyQueue[0];
-          const matched = Math.min(front.qty, remainSell);
-          realizedPnL +=
-            matched * (trade.price - front.costPerShare - sellFeePerShare);
-          front.qty -= matched;
-          remainSell -= matched;
-          if (front.qty === 0) buyQueue.shift();
-        }
-      }
+    if (!positions.has(key)) {
+      positions.set(key, {
+        ticker: trade.ticker,
+        name: trade.name,
+        accountId: trade.accountId,
+        accountName: account.name,
+        accountType: account.type,
+        totalQuantity: 0,
+        avgCost: 0,
+        totalCost: 0,
+        currentPrice: currentPrices[trade.ticker] || 0,
+        currentValue: 0,
+        unrealizedPnL: 0,
+        unrealizedPnLPct: 0,
+        realizedPnL: 0,
+        totalPnL: 0,
+        trades: [],
+      });
     }
 
-    // Remaining buy queue = current holdings
-    const totalQuantity = buyQueue.reduce((s, b) => s + b.qty, 0);
-    if (totalQuantity <= 0) continue; // fully sold out
+    const position = positions.get(key)!;
+    position.trades.push(trade);
 
-    const totalCostInQueue = buyQueue.reduce(
-      (s, b) => s + b.qty * b.costPerShare,
-      0
-    );
-    const avgCost = totalCostInQueue / totalQuantity;
+    if (trade.type === "buy") {
+      const newCost = position.totalCost + trade.quantity * trade.price + trade.fee;
+      const newQuantity = position.totalQuantity + trade.quantity;
+      position.avgCost = newQuantity > 0 ? newCost / newQuantity : 0;
+      position.totalCost = newCost;
+      position.totalQuantity = newQuantity;
+    } else {
+      position.totalQuantity -= trade.quantity;
+      position.totalCost -= trade.quantity * position.avgCost;
+    }
 
-    const ticker = sorted[0].ticker;
-    const currentPrice = currentPrices[ticker] ?? 0;
-    const currentValue = totalQuantity * currentPrice;
-    const unrealizedPnL = currentValue - totalCostInQueue;
-    const unrealizedPnLPct =
-      totalCostInQueue > 0 ? (unrealizedPnL / totalCostInQueue) * 100 : 0;
-
-    positions.push({
-      ticker,
-      name: sorted[0].name,
-      account: sorted[0].account,
-      totalQuantity,
-      avgCost,
-      totalCost: totalCostInQueue,
-      currentPrice,
-      currentValue,
-      unrealizedPnL,
-      unrealizedPnLPct,
-      realizedPnL,
-      totalPnL: unrealizedPnL + realizedPnL,
-      trades: sorted,
-    });
+    position.currentPrice = currentPrices[trade.ticker] || 0;
+    position.currentValue = position.totalQuantity * position.currentPrice;
+    position.unrealizedPnL = position.currentValue - position.totalCost;
+    position.unrealizedPnLPct =
+      position.totalCost > 0 ? (position.unrealizedPnL / position.totalCost) * 100 : 0;
+    position.totalPnL = position.unrealizedPnL + position.realizedPnL;
   }
 
-  return positions.sort((a, b) => b.currentValue - a.currentValue);
+  return Array.from(positions.values()).filter((p) => p.totalQuantity > 0);
 }
 
-/**
- * 포트폴리오 요약 통계 계산
- */
 export function calculateSummary(positions: HoldingPosition[]): PortfolioSummary {
-  const byAccount: PortfolioSummary["byAccount"] = {};
+  const byAccount: Record<string, any> = {};
 
   let totalInvested = 0;
   let totalCurrentValue = 0;
-  let totalUnrealizedPnL = 0;
   let totalRealizedPnL = 0;
 
-  for (const pos of positions) {
-    totalInvested += pos.totalCost;
-    totalCurrentValue += pos.currentValue;
-    totalUnrealizedPnL += pos.unrealizedPnL;
-    totalRealizedPnL += pos.realizedPnL;
+  for (const position of positions) {
+    totalInvested += position.totalCost;
+    totalCurrentValue += position.currentValue;
+    totalRealizedPnL += position.realizedPnL;
 
-    if (!byAccount[pos.account]) {
-      byAccount[pos.account] = { invested: 0, currentValue: 0, pnl: 0, pnlPct: 0 };
+    if (!byAccount[position.accountId]) {
+      byAccount[position.accountId] = {
+        invested: 0,
+        currentValue: 0,
+        pnl: 0,
+        pnlPct: 0,
+      };
     }
-    byAccount[pos.account].invested += pos.totalCost;
-    byAccount[pos.account].currentValue += pos.currentValue;
-    byAccount[pos.account].pnl += pos.unrealizedPnL;
+
+    byAccount[position.accountId].invested += position.totalCost;
+    byAccount[position.accountId].currentValue += position.currentValue;
+    byAccount[position.accountId].pnl +=
+      position.currentValue - position.totalCost + position.realizedPnL;
   }
 
-  for (const acc of Object.values(byAccount)) {
-    acc.pnlPct = acc.invested > 0 ? (acc.pnl / acc.invested) * 100 : 0;
+  // Calculate percentage for each account
+  for (const accountId in byAccount) {
+    const account = byAccount[accountId];
+    account.pnlPct = account.invested > 0 ? (account.pnl / account.invested) * 100 : 0;
   }
+
+  const totalUnrealizedPnL = totalCurrentValue - totalInvested;
+  const totalUnrealizedPnLPct =
+    totalInvested > 0 ? (totalUnrealizedPnL / totalInvested) * 100 : 0;
 
   return {
     totalInvested,
     totalCurrentValue,
     totalUnrealizedPnL,
-    totalUnrealizedPnLPct:
-      totalInvested > 0 ? (totalUnrealizedPnL / totalInvested) * 100 : 0,
+    totalUnrealizedPnLPct,
     totalRealizedPnL,
     byAccount,
   };
 }
 
-/**
- * 자산 배분 비율 계산 (종목별)
- */
-export function calculateAssetAllocation(
-  positions: HoldingPosition[]
-): AssetAllocation[] {
-  const total = positions.reduce((s, p) => s + p.currentValue, 0);
-  if (total === 0) return [];
+export function calculateAssetAllocation(positions: HoldingPosition[]): AssetAllocation[] {
+  const totalValue = positions.reduce((sum, p) => sum + p.currentValue, 0);
 
-  return positions.map((pos, i) => ({
-    name: pos.name,
-    ticker: pos.ticker,
-    account: pos.account,
-    value: pos.currentValue,
-    percentage: (pos.currentValue / total) * 100,
-    color: CHART_COLORS[i % CHART_COLORS.length],
+  return positions.map((position, index) => ({
+    name: position.name,
+    ticker: position.ticker,
+    accountId: position.accountId,
+    accountName: position.accountName,
+    value: position.currentValue,
+    percentage: totalValue > 0 ? (position.currentValue / totalValue) * 100 : 0,
+    color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 }
 
-/**
- * 계좌별 자산 배분 계산
- */
-export function calculateAccountAllocation(
-  positions: HoldingPosition[]
-): AssetAllocation[] {
-  const total = positions.reduce((s, p) => s + p.currentValue, 0);
-  if (total === 0) return [];
+export function calculateAccountAllocation(positions: HoldingPosition[]): AssetAllocation[] {
+  const byAccount = new Map<string, { value: number; name: string; type: AccountType }>();
 
-  const byAccount: Record<string, number> = {};
-  for (const pos of positions) {
-    byAccount[pos.account] = (byAccount[pos.account] ?? 0) + pos.currentValue;
+  for (const position of positions) {
+    if (!byAccount.has(position.accountId)) {
+      byAccount.set(position.accountId, {
+        value: 0,
+        name: position.accountName,
+        type: position.accountType,
+      });
+    }
+    byAccount.get(position.accountId)!.value += position.currentValue;
   }
 
-  const accountColors: Record<string, string> = {
-    "연금저축": "#00D4AA",
-    "IRP": "#F59E0B",
-    "일반": "#60A5FA",
-  };
+  const totalValue = Array.from(byAccount.values()).reduce((sum, a) => sum + a.value, 0);
 
-  return Object.entries(byAccount).map(([account, value], i) => ({
-    name: account,
-    ticker: account,
-    account,
-    value,
-    percentage: (value / total) * 100,
-    color: accountColors[account] ?? CHART_COLORS[i % CHART_COLORS.length],
+  return Array.from(byAccount.entries()).map(([accountId, data], index) => ({
+    name: data.name,
+    ticker: accountId,
+    accountId,
+    accountName: data.name,
+    value: data.value,
+    percentage: totalValue > 0 ? (data.value / totalValue) * 100 : 0,
+    color: CHART_COLORS[index % CHART_COLORS.length],
   }));
 }
 
-/**
- * 숫자 포맷 유틸리티
- */
-export function formatKRW(value: number): string {
+export function formatKRW(value: number, decimals = 0): string {
   return new Intl.NumberFormat("ko-KR", {
     style: "currency",
     currency: "KRW",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-export function formatNumber(value: number, decimals = 0): string {
-  return new Intl.NumberFormat("ko-KR", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
@@ -294,9 +281,65 @@ export function formatPnL(value: number): string {
 }
 
 // Sample data for demonstration
+export const SAMPLE_USERS: User[] = [
+  {
+    id: "user1",
+    name: "김철수",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "user2",
+    name: "이영희",
+    createdAt: "2024-01-05",
+  },
+];
+
+export const SAMPLE_ACCOUNTS: Account[] = [
+  {
+    id: "acc1",
+    userId: "user1",
+    name: "일반 계좌",
+    type: "일반",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "acc2",
+    userId: "user1",
+    name: "연금저축",
+    type: "연금저축",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "acc3",
+    userId: "user1",
+    name: "IRP",
+    type: "IRP",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "acc4",
+    userId: "user2",
+    name: "일반 계좌",
+    type: "일반",
+    createdAt: "2024-01-05",
+  },
+];
+
 export const SAMPLE_TRADES: Trade[] = [
   {
     id: "1",
+    accountId: "acc1",
+    ticker: "NVDA",
+    name: "NVIDIA Corp.",
+    type: "buy",
+    quantity: 10,
+    price: 820820,
+    fee: 41041,
+    date: "2024-01-15",
+  },
+  {
+    id: "2",
+    accountId: "acc2",
     ticker: "005930",
     name: "삼성전자",
     type: "buy",
@@ -304,10 +347,10 @@ export const SAMPLE_TRADES: Trade[] = [
     price: 72000,
     fee: 3600,
     date: "2024-01-15",
-    account: "연금저축",
   },
   {
-    id: "2",
+    id: "3",
+    accountId: "acc2",
     ticker: "005930",
     name: "삼성전자",
     type: "buy",
@@ -315,95 +358,63 @@ export const SAMPLE_TRADES: Trade[] = [
     price: 68000,
     fee: 2040,
     date: "2024-03-10",
-    account: "연금저축",
-  },
-  {
-    id: "3",
-    ticker: "000660",
-    name: "SK하이닉스",
-    type: "buy",
-    quantity: 20,
-    price: 135000,
-    fee: 2700,
-    date: "2024-02-20",
-    account: "IRP",
   },
   {
     id: "4",
-    ticker: "035420",
-    name: "NAVER",
-    type: "buy",
-    quantity: 15,
-    price: 185000,
-    fee: 2775,
-    date: "2024-04-05",
-    account: "연금저축",
-  },
-  {
-    id: "5",
-    ticker: "035420",
-    name: "NAVER",
-    type: "sell",
-    quantity: 5,
-    price: 195000,
-    fee: 975,
-    date: "2024-06-15",
-    account: "연금저축",
-  },
-  {
-    id: "6",
-    ticker: "373220",
-    name: "LG에너지솔루션",
-    type: "buy",
-    quantity: 10,
-    price: 420000,
-    fee: 4200,
-    date: "2024-05-20",
-    account: "IRP",
-  },
-  {
-    id: "7",
+    accountId: "acc1",
     ticker: "AAPL",
     name: "Apple Inc.",
     type: "buy",
     quantity: 25,
-    price: 185000,
-    fee: 4625,
-    date: "2024-03-01",
-    account: "일반",
+    price: 185185,
+    fee: 9259,
+    date: "2024-02-20",
   },
   {
-    id: "8",
-    ticker: "NVDA",
-    name: "NVIDIA Corp.",
+    id: "5",
+    accountId: "acc3",
+    ticker: "373220",
+    name: "LG에너지솔루션",
     type: "buy",
     quantity: 10,
-    price: 820000,
-    fee: 8200,
+    price: 420420,
+    fee: 21021,
+    date: "2024-01-20",
+  },
+  {
+    id: "6",
+    accountId: "acc3",
+    ticker: "000660",
+    name: "SK하이닉스",
+    type: "buy",
+    quantity: 20,
+    price: 135135,
+    fee: 6757,
     date: "2024-02-10",
-    account: "일반",
+  },
+  {
+    id: "7",
+    accountId: "acc2",
+    ticker: "035420",
+    name: "NAVER",
+    type: "buy",
+    quantity: 10,
+    price: 185185,
+    fee: 9259,
+    date: "2024-03-01",
   },
 ];
 
 export const SAMPLE_PRICES: Record<string, number> = {
+  NVDA: 1250000,
   "005930": 75500,
+  AAPL: 198000,
+  "373220": 385000,
   "000660": 158000,
   "035420": 178000,
-  "373220": 385000,
-  "AAPL": 198000,
-  "NVDA": 1250000,
 };
 
-
-/**
- * 연도별 배당금 집계
- */
-export interface YearlyDividend {
-  year: number;
-  totalDividend: number;
-}
-
-export function calculateYearlyDividends(dividends: Dividend[]): YearlyDividend[] {
+export function calculateYearlyDividends(dividends: Dividend[]): Array<{ year: number; totalDividend: number }> {
   const byYear: Record<number, number> = {};
 
   for (const div of dividends) {
@@ -418,7 +429,6 @@ export function calculateYearlyDividends(dividends: Dividend[]): YearlyDividend[
     }))
     .sort((a, b) => a.year - b.year);
 }
-
 
 /**
  * 예상 배당금 계산 - 현재 보유 주식과 최근 배당 이력 기반
@@ -481,4 +491,9 @@ export function calculateProjectedDividendSummary(
     projectedDividendYield: yield_,
     tickerCount: projected.length,
   };
+}
+
+export interface YearlyDividend {
+  year: number;
+  totalDividend: number;
 }

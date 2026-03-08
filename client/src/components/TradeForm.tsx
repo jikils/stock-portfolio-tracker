@@ -22,7 +22,7 @@ const tradeSchema = z.object({
   price: z.preprocess((v) => Number(v), z.number().positive("단가는 0보다 커야 합니다")),
   fee: z.preprocess((v) => Number(v), z.number().min(0, "수수료는 0 이상이어야 합니다")),
   date: z.string().min(1, "거래일을 입력하세요"),
-  account: z.string().min(1, "계좌를 선택하세요"),
+  accountId: z.string().min(1, "계좌를 선택하세요"),
 });
 
 type TradeFormData = z.infer<typeof tradeSchema>;
@@ -59,7 +59,7 @@ export default function TradeForm({
       type: "buy",
       fee: 0,
       date: new Date().toISOString().split("T")[0],
-      account: "연금저축",
+      accountId: "acc2",
     },
   });
 
@@ -79,14 +79,14 @@ export default function TradeForm({
         price: initialData.price,
         fee: initialData.fee,
         date: initialData.date,
-        account: initialData.account,
+        accountId: initialData.accountId,
       });
     } else if (!initialData && open) {
       reset({
         type: "buy",
         fee: 0,
         date: new Date().toISOString().split("T")[0],
-        account: "연금저축",
+        accountId: "acc2",
       });
     }
   }, [initialData, open, reset]);
@@ -101,7 +101,7 @@ export default function TradeForm({
       price: data.price,
       fee: data.fee,
       date: data.date,
-      account: data.account,
+      accountId: data.accountId,
     });
     onClose();
   };
@@ -227,8 +227,8 @@ export default function TradeForm({
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground uppercase tracking-wide">계좌 유형</Label>
             <Select
-              defaultValue={initialData?.account ?? "연금저축"}
-              onValueChange={(v) => setValue("account", v)}
+              defaultValue={initialData?.accountId ?? "acc2"}
+              onValueChange={(v) => setValue("accountId", v)}
             >
               <SelectTrigger className="bg-[oklch(0.18_0.02_250)] border-[oklch(0.25_0.02_250)]">
                 <SelectValue placeholder="계좌 선택" />

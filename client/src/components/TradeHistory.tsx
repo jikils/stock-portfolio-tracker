@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { usePortfolio } from "@/contexts/PortfolioContext";
-import { Trade, formatKRW, formatNumber } from "@/lib/portfolio";
+import { Trade, formatKRW } from "@/lib/portfolio";
 import TradeForm from "./TradeForm";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Plus, Search } from "lucide-react";
@@ -23,7 +23,7 @@ export default function TradeHistory() {
     (t) =>
       t.ticker.toLowerCase().includes(search.toLowerCase()) ||
       t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.account.includes(search)
+      t.accountId.includes(search)
   );
 
   const sorted = [...filtered].sort(
@@ -144,12 +144,12 @@ export default function TradeHistory() {
 
                 {/* 계좌 */}
                 <div className="col-span-2">
-                  <span className="text-xs text-muted-foreground">{trade.account}</span>
+                  <span className="text-xs text-muted-foreground">{trade.accountId}</span>
                 </div>
 
                 {/* 수량 */}
                 <div className="col-span-1 text-right font-['JetBrains_Mono'] text-xs">
-                  {formatNumber(trade.quantity)}
+                  {trade.quantity}
                 </div>
 
                 {/* 단가 */}

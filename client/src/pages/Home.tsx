@@ -20,6 +20,7 @@ import DividendList from "@/components/DividendList";
 import DividendCharts from "@/components/DividendCharts";
 import DividendGrowthChart from "@/components/DividendGrowthChart";
 import ProjectedDividendSummary from "@/components/ProjectedDividendSummary";
+import UserAccountSelector from "@/components/UserAccountSelector";
 import { Trade, Dividend } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +102,11 @@ export default function Home() {
                 <div className="w-1.5 h-1.5 rounded-full bg-[oklch(0.72_0.18_168)] animate-pulse" />
                 <span className="hidden sm:inline">LIVE</span>
               </div>
+            </div>
+
+            {/* User/Account Selector */}
+            <div className="hidden lg:flex">
+              <UserAccountSelector />
             </div>
 
             {/* Desktop Nav Tabs */}

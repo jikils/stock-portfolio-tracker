@@ -58,7 +58,7 @@ export function calculateTimeseriesData(
 
     // Process trades on this date
     for (const trade of tradesOnDate) {
-      const key = `${trade.ticker}__${trade.account}`;
+      const key = `${trade.ticker}__${trade.accountId}`;
 
       if (!holdings[key]) {
         holdings[key] = { quantity: 0, totalCost: 0, realizedPnL: 0 };

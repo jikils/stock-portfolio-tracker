@@ -25,7 +25,7 @@ interface DividendFormProps {
 }
 
 export default function DividendForm({ open, onClose, onSubmit }: DividendFormProps) {
-  const { positions } = usePortfolio();
+  const { positions, currentAccountId } = usePortfolio();
   const [ticker, setTicker] = useState("");
   const [name, setName] = useState("");
   const [exDate, setExDate] = useState("");
@@ -58,6 +58,7 @@ export default function DividendForm({ open, onClose, onSubmit }: DividendFormPr
       currentPrice > 0 ? ((dps / currentPrice) * 100) : 0;
 
     onSubmit({
+      accountId: currentAccountId,
       ticker,
       name,
       exDate,
