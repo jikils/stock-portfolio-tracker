@@ -1,5 +1,5 @@
 // ============================================================
-// Portfolio Context — global state management
+// Portfolio Context — global state management with IndexedDB
 // ============================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
@@ -20,6 +20,7 @@ import {
   SAMPLE_USERS,
   SAMPLE_ACCOUNTS,
 } from "@/lib/portfolio";
+import { setItem as storageSetItem, getItem as storageGetItem, migrateFromLocalStorage } from "@/lib/storage";
 import { nanoid } from "nanoid";
 
 interface PortfolioContextValue {
@@ -59,7 +60,7 @@ const STORAGE_KEY_DIVIDENDS = "portfolio_dividends";
 const STORAGE_KEY_CURRENT_USER = "portfolio_current_user";
 const STORAGE_KEY_CURRENT_ACCOUNT = "portfolio_current_account";
 
-function loadFromStorage<T>(key: string, fallback: T): T {
+function loadFromStorageSync<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw) as T;
@@ -71,54 +72,80 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 
 export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   const [users, setUsers] = useState<User[]>(() =>
-    loadFromStorage(STORAGE_KEY_USERS, SAMPLE_USERS)
+    loadFromStorageSync(STORAGE_KEY_USERS, SAMPLE_USERS)
   );
   const [accounts, setAccounts] = useState<Account[]>(() =>
-    loadFromStorage(STORAGE_KEY_ACCOUNTS, SAMPLE_ACCOUNTS)
+    loadFromStorageSync(STORAGE_KEY_ACCOUNTS, SAMPLE_ACCOUNTS)
   );
   const [currentUserId, setCurrentUserId] = useState<string>(() =>
-    loadFromStorage(STORAGE_KEY_CURRENT_USER, SAMPLE_USERS[0]?.id || "")
+    loadFromStorageSync(STORAGE_KEY_CURRENT_USER, SAMPLE_USERS[0]?.id || "")
   );
   const [currentAccountId, setCurrentAccountId] = useState<string>(() =>
-    loadFromStorage(STORAGE_KEY_CURRENT_ACCOUNT, SAMPLE_ACCOUNTS[0]?.id || "")
+    loadFromStorageSync(STORAGE_KEY_CURRENT_ACCOUNT, SAMPLE_ACCOUNTS[0]?.id || "")
   );
   const [trades, setTrades] = useState<Trade[]>(() =>
-    loadFromStorage(STORAGE_KEY_TRADES, SAMPLE_TRADES)
+    loadFromStorageSync(STORAGE_KEY_TRADES, SAMPLE_TRADES)
   );
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>(() =>
-    loadFromStorage(STORAGE_KEY_PRICES, SAMPLE_PRICES)
+    loadFromStorageSync(STORAGE_KEY_PRICES, SAMPLE_PRICES)
   );
   const [dividends, setDividends] = useState<Dividend[]>(() =>
-    loadFromStorage(STORAGE_KEY_DIVIDENDS, [])
+    loadFromStorageSync(STORAGE_KEY_DIVIDENDS, [])
   );
 
-  // Persist to localStorage
+  // Migrate from localStorage to IndexedDB on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+    migrateFromLocalStorage().catch(err => console.error('Migration error:', err));
+  }, []);
+
+  // Persist to IndexedDB (with localStorage fallback)
+  useEffect(() => {
+    storageSetItem(STORAGE_KEY_USERS, users).catch(err => {
+      console.error('Error saving users:', err);
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+    });
   }, [users]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(accounts));
+    storageSetItem(STORAGE_KEY_ACCOUNTS, accounts).catch(err => {
+      console.error('Error saving accounts:', err);
+      localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(accounts));
+    });
   }, [accounts]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserId);
+    storageSetItem(STORAGE_KEY_CURRENT_USER, currentUserId).catch(err => {
+      console.error('Error saving current user:', err);
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, currentUserId);
+    });
   }, [currentUserId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_CURRENT_ACCOUNT, currentAccountId);
+    storageSetItem(STORAGE_KEY_CURRENT_ACCOUNT, currentAccountId).catch(err => {
+      console.error('Error saving current account:', err);
+      localStorage.setItem(STORAGE_KEY_CURRENT_ACCOUNT, currentAccountId);
+    });
   }, [currentAccountId]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_TRADES, JSON.stringify(trades));
+    storageSetItem(STORAGE_KEY_TRADES, trades).catch(err => {
+      console.error('Error saving trades:', err);
+      localStorage.setItem(STORAGE_KEY_TRADES, JSON.stringify(trades));
+    });
   }, [trades]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(currentPrices));
+    storageSetItem(STORAGE_KEY_PRICES, currentPrices).catch(err => {
+      console.error('Error saving prices:', err);
+      localStorage.setItem(STORAGE_KEY_PRICES, JSON.stringify(currentPrices));
+    });
   }, [currentPrices]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DIVIDENDS, JSON.stringify(dividends));
+    storageSetItem(STORAGE_KEY_DIVIDENDS, dividends).catch(err => {
+      console.error('Error saving dividends:', err);
+      localStorage.setItem(STORAGE_KEY_DIVIDENDS, JSON.stringify(dividends));
+    });
   }, [dividends]);
 
   // Calculate positions for all accounts
