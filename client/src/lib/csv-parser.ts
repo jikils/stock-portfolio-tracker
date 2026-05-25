@@ -238,7 +238,7 @@ function convertRowToTrade(
     id: nanoid(),
     accountId,
     ticker,
-    tickerName,
+    name: tickerName,
     type,
     quantity,
     price,

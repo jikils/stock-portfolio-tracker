@@ -171,7 +171,7 @@ export function ImportCSVDialog({ open, onOpenChange }: ImportCSVDialogProps) {
                       {parseResult.trades.slice(0, 5).map((trade, i) => (
                         <div key={i} className="text-xs text-muted-foreground border-b pb-2">
                           <div className="flex justify-between">
-                            <span className="font-medium text-foreground">{trade.tickerName}</span>
+                            <span className="font-medium text-foreground">{trade.name}</span>
                             <span className={trade.type === 'buy' ? 'text-green-600' : 'text-red-600'}>
                               {trade.type === 'buy' ? '매수' : '매도'} {trade.quantity}주
                             </span>
