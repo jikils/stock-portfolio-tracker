@@ -21,6 +21,7 @@ import DividendCharts from "@/components/DividendCharts";
 import DividendGrowthChart from "@/components/DividendGrowthChart";
 import ProjectedDividendSummary from "@/components/ProjectedDividendSummary";
 import UserAccountSelector from "@/components/UserAccountSelector";
+import { ImportCSVDialog } from "@/components/ImportCSVDialog";
 import { Trade, Dividend } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,7 @@ import {
   ChevronRight,
   ShieldCheck,
   DollarSign,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -43,6 +45,7 @@ export default function Home() {
   const { addTrade, addDividend, loadSampleData, clearAllData, trades } = usePortfolio();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showDividendForm, setShowDividendForm] = useState(false);
+  const [showImportCSV, setShowImportCSV] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
   const handleAddTrade = (data: Omit<Trade, "id">) => {
@@ -298,6 +301,23 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
+            <div className="mb-4 flex gap-2">
+              <Button
+                onClick={() => setShowTradeForm(true)}
+                className="bg-[oklch(0.72_0.18_168)] text-[oklch(0.1_0.02_250)] hover:bg-[oklch(0.65_0.18_168)] gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                매매 추가
+              </Button>
+              <Button
+                onClick={() => setShowImportCSV(true)}
+                variant="outline"
+                className="border-[oklch(0.4_0.02_250)] text-white hover:bg-[oklch(0.18_0.02_250)] gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                CSV 가져오기
+              </Button>
+            </div>
             <TradeHistory />
           </motion.div>
         )}
@@ -388,6 +408,12 @@ export default function Home() {
         open={showDividendForm}
         onClose={() => setShowDividendForm(false)}
         onSubmit={handleAddDividend}
+      />
+
+      {/* ── Import CSV Dialog ── */}
+      <ImportCSVDialog
+        open={showImportCSV}
+        onOpenChange={setShowImportCSV}
       />
     </div>
   );
