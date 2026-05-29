@@ -6,6 +6,8 @@
 dist/
 build/
 *.dist
+# Except docs (for GitHub Pages)
+!docs/
 
 # Environment variables
 .env
