@@ -153,7 +153,7 @@ function vitePluginManusDebugCollector(): Plugin {
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
 
 // GitHub Pages base path (change if deploying to a subdirectory)
-const base = process.env.VITE_BASE_PATH || "/";
+const base = process.env.VITE_BASE_PATH || "/stock-portfolio-tracker/";
 
 export default defineConfig({
   base,
