@@ -21,8 +21,10 @@ import DividendCharts from "@/components/DividendCharts";
 import DividendGrowthChart from "@/components/DividendGrowthChart";
 import ProjectedDividendSummary from "@/components/ProjectedDividendSummary";
 import UserAccountSelector from "@/components/UserAccountSelector";
+import UserForm from "@/components/UserForm";
+import AccountForm from "@/components/AccountForm";
 import { ImportCSVDialog } from "@/components/ImportCSVDialog";
-import { Trade, Dividend } from "@/lib/portfolio";
+import { Trade, Dividend, User, Account } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -35,6 +37,8 @@ import {
   ShieldCheck,
   DollarSign,
   Upload,
+  Users,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -42,9 +46,11 @@ import { motion } from "framer-motion";
 type TabType = "dashboard" | "trades" | "prices" | "dividends";
 
 export default function Home() {
-  const { addTrade, addDividend, loadSampleData, clearAllData, trades } = usePortfolio();
+  const { addTrade, addDividend, addUser, addAccount, loadSampleData, clearAllData, trades } = usePortfolio();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showDividendForm, setShowDividendForm] = useState(false);
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [showAccountForm, setShowAccountForm] = useState(false);
   const [showImportCSV, setShowImportCSV] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
@@ -70,6 +76,16 @@ export default function Home() {
       clearAllData();
       toast.success("데이터가 초기화되었습니다");
     }
+  };
+
+  const handleAddUser = (data: Omit<User, "id" | "createdAt">) => {
+    addUser(data);
+    toast.success(`사용자 ${data.name}이 생성되었습니다`);
+  };
+
+  const handleAddAccount = (data: Omit<Account, "id" | "createdAt">) => {
+    addAccount(data);
+    toast.success(`계좌 ${data.name} (${data.type})이 생성되었습니다`);
   };
 
   const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
@@ -154,6 +170,26 @@ export default function Home() {
                   <span className="hidden sm:inline">초기화</span>
                 </Button>
               )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowUserForm(true)}
+                className="h-8 text-xs border-[oklch(0.3_0.02_250)] hover:bg-[oklch(0.18_0.02_250)] gap-1"
+                title="새 사용자 추가"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">사용자</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowAccountForm(true)}
+                className="h-8 text-xs border-[oklch(0.3_0.02_250)] hover:bg-[oklch(0.18_0.02_250)] gap-1"
+                title="새 계좌 추가"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">계좌</span>
+              </Button>
               <Button
                 size="sm"
                 onClick={() => setShowTradeForm(true)}
@@ -414,6 +450,20 @@ export default function Home() {
       <ImportCSVDialog
         open={showImportCSV}
         onOpenChange={setShowImportCSV}
+      />
+
+      {/* ── User Form Modal ── */}
+      <UserForm
+        open={showUserForm}
+        onClose={() => setShowUserForm(false)}
+        onSubmit={handleAddUser}
+      />
+
+      {/* ── Account Form Modal ── */}
+      <AccountForm
+        open={showAccountForm}
+        onClose={() => setShowAccountForm(false)}
+        onSubmit={handleAddAccount}
       />
     </div>
   );
