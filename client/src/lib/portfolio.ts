@@ -47,6 +47,18 @@ export interface Dividend {
   dividendYield: number;
 }
 
+export type CashFlowType = "deposit" | "withdrawal";
+
+export interface CashFlow {
+  id: string;
+  accountId: string;
+  type: CashFlowType;
+  amount: number;
+  fee: number;
+  date: string;
+  note?: string;
+}
+
 export interface HoldingPosition {
   ticker: string;
   name: string;
@@ -413,6 +425,36 @@ export const SAMPLE_PRICES: Record<string, number> = {
   "000660": 158000,
   "035420": 178000,
 };
+
+export const SAMPLE_CASHFLOWS: CashFlow[] = [
+  {
+    id: "cf1",
+    accountId: "acc1",
+    type: "deposit",
+    amount: 10000000,
+    fee: 0,
+    date: "2023-12-01",
+    note: "초기 입금",
+  },
+  {
+    id: "cf2",
+    accountId: "acc2",
+    type: "deposit",
+    amount: 5000000,
+    fee: 0,
+    date: "2024-01-01",
+    note: "월급 입금",
+  },
+  {
+    id: "cf3",
+    accountId: "acc2",
+    type: "deposit",
+    amount: 3000000,
+    fee: 0,
+    date: "2024-02-15",
+    note: "보너스",
+  },
+];
 
 export function calculateYearlyDividends(dividends: Dividend[]): Array<{ year: number; totalDividend: number }> {
   const byYear: Record<number, number> = {};

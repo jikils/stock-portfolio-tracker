@@ -19,3 +19,21 @@ export const accountFormSchema = z.object({
 });
 
 export type AccountFormData = z.infer<typeof accountFormSchema>;
+
+export const cashFlowFormSchema = z.object({
+  accountId: z.string().min(1, "계좌를 선택하세요"),
+  type: z.enum(["deposit", "withdrawal"]),
+  amount: z.preprocess(
+    (v) => Number(v),
+    z.number().positive("금액은 0보다 커야 합니다")
+  ),
+  fee: z.preprocess(
+    (v) => Number(v),
+    z.number().min(0, "수수료는 0 이상이어야 합니다")
+  ),
+  date: z.string().min(1, "날짜를 입력하세요"),
+  note: z.string().max(100, "메모는 100자 이내여야 합니다").optional(),
+});
+
+export type CashFlowFormData = z.infer<typeof cashFlowFormSchema>;
+

@@ -53,13 +53,14 @@ export default function UserAccountSelector() {
                 {account.name} ({account.type})
               </SelectItem>
             ))}
+            <SelectItem value="all-accounts">모든 계좌 (ALL)</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* 현재 선택 정보 표시 */}
       <div className="text-xs text-muted-foreground ml-2">
-        {currentUser?.name} / {currentAccount?.name}
+        {currentUser?.name} / {currentAccountId === "all-accounts" ? "모든 계좌" : currentAccount?.name}
       </div>
     </div>
   );

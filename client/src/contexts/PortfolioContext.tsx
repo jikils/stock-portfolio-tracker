@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import {
   Trade,
   Dividend,
+  CashFlow,
   User,
   Account,
   HoldingPosition,
@@ -19,6 +20,7 @@ import {
   SAMPLE_PRICES,
   SAMPLE_USERS,
   SAMPLE_ACCOUNTS,
+  SAMPLE_CASHFLOWS,
 } from "@/lib/portfolio";
 import { setItem as storageSetItem, getItem as storageGetItem, migrateFromLocalStorage } from "@/lib/storage";
 import { nanoid } from "nanoid";
@@ -30,6 +32,7 @@ interface PortfolioContextValue {
   currentAccountId: string;
   trades: Trade[];
   dividends: Dividend[];
+  cashFlows: CashFlow[];
   currentPrices: Record<string, number>;
   positions: HoldingPosition[];
   summary: PortfolioSummary;
@@ -45,6 +48,9 @@ interface PortfolioContextValue {
   addDividend: (dividend: Omit<Dividend, "id">) => void;
   updateDividend: (id: string, dividend: Omit<Dividend, "id">) => void;
   deleteDividend: (id: string) => void;
+  addCashFlow: (cashFlow: Omit<CashFlow, "id">) => void;
+  updateCashFlow: (id: string, cashFlow: Omit<CashFlow, "id">) => void;
+  deleteCashFlow: (id: string) => void;
   updateCurrentPrice: (ticker: string, price: number) => void;
   loadSampleData: () => void;
   clearAllData: () => void;
@@ -57,6 +63,7 @@ const STORAGE_KEY_ACCOUNTS = "portfolio_accounts";
 const STORAGE_KEY_TRADES = "portfolio_trades";
 const STORAGE_KEY_PRICES = "portfolio_prices";
 const STORAGE_KEY_DIVIDENDS = "portfolio_dividends";
+const STORAGE_KEY_CASHFLOWS = "portfolio_cashflows";
 const STORAGE_KEY_CURRENT_USER = "portfolio_current_user";
 const STORAGE_KEY_CURRENT_ACCOUNT = "portfolio_current_account";
 
@@ -91,6 +98,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
   );
   const [dividends, setDividends] = useState<Dividend[]>(() =>
     loadFromStorageSync(STORAGE_KEY_DIVIDENDS, [])
+  );
+  const [cashFlows, setCashFlows] = useState<CashFlow[]>(() =>
+    loadFromStorageSync(STORAGE_KEY_CASHFLOWS, SAMPLE_CASHFLOWS)
   );
 
   // Migrate from localStorage to IndexedDB on mount
@@ -148,13 +158,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     });
   }, [dividends]);
 
+  useEffect(() => {
+    storageSetItem(STORAGE_KEY_CASHFLOWS, cashFlows).catch(err => {
+      console.error('Error saving cash flows:', err);
+      localStorage.setItem(STORAGE_KEY_CASHFLOWS, JSON.stringify(cashFlows));
+    });
+  }, [cashFlows]);
+
   // Calculate positions for all accounts
   const allPositions = calculatePositions(trades, currentPrices, accounts);
-  
-  // Filter data by current account
-  const accountTrades = trades.filter(t => t.accountId === currentAccountId);
-  const accountDividends = dividends.filter(d => d.accountId === currentAccountId);
-  const accountPositions = allPositions.filter(p => p.accountId === currentAccountId);
+
+  // Filter data by current account (or all accounts)
+  const isViewingAllAccounts = currentAccountId === "all-accounts";
+  const accountTrades = isViewingAllAccounts
+    ? trades
+    : trades.filter(t => t.accountId === currentAccountId);
+  const accountDividends = isViewingAllAccounts
+    ? dividends
+    : dividends.filter(d => d.accountId === currentAccountId);
+  const accountCashFlows = isViewingAllAccounts
+    ? cashFlows
+    : cashFlows.filter(c => c.accountId === currentAccountId);
+  const accountPositions = isViewingAllAccounts
+    ? allPositions
+    : allPositions.filter(p => p.accountId === currentAccountId);
 
   const summary = calculateSummary(accountPositions);
   const assetAllocation = calculateAssetAllocation(accountPositions);
@@ -219,6 +246,20 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setDividends((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
+  const addCashFlow = useCallback((cashFlow: Omit<CashFlow, "id">) => {
+    setCashFlows((prev) => [...prev, { ...cashFlow, id: nanoid() }]);
+  }, []);
+
+  const updateCashFlow = useCallback((id: string, cashFlow: Omit<CashFlow, "id">) => {
+    setCashFlows((prev) =>
+      prev.map((cf) => (cf.id === id ? { ...cashFlow, id } : cf))
+    );
+  }, []);
+
+  const deleteCashFlow = useCallback((id: string) => {
+    setCashFlows((prev) => prev.filter((cf) => cf.id !== id));
+  }, []);
+
   const updateCurrentPrice = useCallback((ticker: string, price: number) => {
     setCurrentPrices((prev) => ({ ...prev, [ticker]: price }));
   }, []);
@@ -236,6 +277,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     setTrades([]);
     setCurrentPrices({});
     setDividends([]);
+    setCashFlows([]);
   }, []);
 
   return (
@@ -247,6 +289,7 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         currentAccountId,
         trades: accountTrades,
         dividends: accountDividends,
+        cashFlows: accountCashFlows,
         currentPrices,
         positions: accountPositions,
         summary,
@@ -262,6 +305,9 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
         addDividend,
         updateDividend,
         deleteDividend,
+        addCashFlow,
+        updateCashFlow,
+        deleteCashFlow,
         updateCurrentPrice,
         loadSampleData,
         clearAllData,

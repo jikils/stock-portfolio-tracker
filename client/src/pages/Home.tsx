@@ -23,8 +23,9 @@ import ProjectedDividendSummary from "@/components/ProjectedDividendSummary";
 import UserAccountSelector from "@/components/UserAccountSelector";
 import UserForm from "@/components/UserForm";
 import AccountForm from "@/components/AccountForm";
+import DepositWithdrawalForm from "@/components/DepositWithdrawalForm";
 import { ImportCSVDialog } from "@/components/ImportCSVDialog";
-import { Trade, Dividend, User, Account } from "@/lib/portfolio";
+import { Trade, Dividend, User, Account, CashFlow } from "@/lib/portfolio";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -39,6 +40,7 @@ import {
   Upload,
   Users,
   Briefcase,
+  TrendingDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -46,11 +48,12 @@ import { motion } from "framer-motion";
 type TabType = "dashboard" | "trades" | "prices" | "dividends";
 
 export default function Home() {
-  const { addTrade, addDividend, addUser, addAccount, loadSampleData, clearAllData, trades } = usePortfolio();
+  const { addTrade, addDividend, addUser, addAccount, addCashFlow, loadSampleData, clearAllData, trades } = usePortfolio();
   const [showTradeForm, setShowTradeForm] = useState(false);
   const [showDividendForm, setShowDividendForm] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showAccountForm, setShowAccountForm] = useState(false);
+  const [showCashFlowForm, setShowCashFlowForm] = useState(false);
   const [showImportCSV, setShowImportCSV] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
@@ -86,6 +89,13 @@ export default function Home() {
   const handleAddAccount = (data: Omit<Account, "id" | "createdAt">) => {
     addAccount(data);
     toast.success(`계좌 ${data.name} (${data.type})이 생성되었습니다`);
+  };
+
+  const handleAddCashFlow = (data: Omit<CashFlow, "id">) => {
+    addCashFlow(data);
+    toast.success(
+      `${data.type === "deposit" ? "입금" : "출금"} ₩${data.amount.toLocaleString()}이 기록되었습니다`
+    );
   };
 
   const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
@@ -189,6 +199,16 @@ export default function Home() {
               >
                 <Briefcase className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">계좌</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowCashFlowForm(true)}
+                className="h-8 text-xs border-[oklch(0.3_0.02_250)] hover:bg-[oklch(0.18_0.02_250)] gap-1"
+                title="입출금 기록"
+              >
+                <TrendingDown className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">입출금</span>
               </Button>
               <Button
                 size="sm"
@@ -444,6 +464,13 @@ export default function Home() {
         open={showDividendForm}
         onClose={() => setShowDividendForm(false)}
         onSubmit={handleAddDividend}
+      />
+
+      {/* ── Deposit/Withdrawal Form Modal ── */}
+      <DepositWithdrawalForm
+        open={showCashFlowForm}
+        onClose={() => setShowCashFlowForm(false)}
+        onSubmit={handleAddCashFlow}
       />
 
       {/* ── Import CSV Dialog ── */}
